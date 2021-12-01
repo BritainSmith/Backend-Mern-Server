@@ -3,7 +3,6 @@
 const User = require("../models/User");
 const router = require("express").Router();
 const bcrypt = require("bcrypt");
-const { createConnection } = require("mongoose");
 
 //User crud routes
 
@@ -91,8 +90,34 @@ router.put("/:id/follow", async (req, res) => {
 	}
 });
 
-//unfollow a user
+//Unfollow a user
 
+router.put("/:id/unfollow", async (req, res) => {
+	// if the user is the same id, return error cannot unfollow self.
+	if (req.body.userId !== req.params.id) {
+		try {
+			const user = await User.findById(req.params.id);
+			const currentUser = await User.findById(req.body.userId);
+
+			//If the user's followers DO include this user ->
+			// Remove the currentUser from the user's followers array.
+			// Else, return an error that states you've already unfollowed the current user.
+			if (user.followers.includes(req.body.userId)) {
+				await user.updateOne({ $pull: { followers: req.body.userId } });
+				await currentUser.updateOne({ $pull: { following: req.body.userId } });
+
+				res.status(200).json("You no longer follow this User.");
+			} else {
+				res.status(403).json("You have already unfollowed this User.");
+			}
+		} catch (err) {
+			res.status(500).json(err);
+		}
+	} else {
+		res.status(403).json("you cannot unfollow yourself sorry!");
+	}
+});
+//Dummy route
 router.get("/", (req, res) => {
 	res.send("hey it's users route");
 });
